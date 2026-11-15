@@ -109,13 +109,18 @@ python main.py --limit 10    # or --all
 
 ## Running the tests
 
-```bash
-# Fast tests only (no live scan, no paid API calls)
-pytest -m "not slow" -v
+Tests are tagged by type so the fast suite runs on its own, without a server, a browser or paid API calls:
 
-# All tests, including end-to-end (needs the server running + Playwright browsers)
+```bash
+# Fast API tests only (no server, no browser, no paid API)
+pytest -m "not slow and not e2e" -v
+
+# End-to-end browser tests (needs the server running + Playwright)
 playwright install chromium
-pytest -v
+pytest -m "e2e" -v
+
+# Tests that hit Trivy and the paid LLM API
+pytest -m "slow" -v
 ```
 
 ---
