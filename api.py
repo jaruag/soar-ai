@@ -13,8 +13,6 @@ app = FastAPI(title="SOAR-AI API")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 storage.init_db()
-REPORT_PATH = "data/trivy_report.json"
-
 
 class ScanRequest(BaseModel):
     package: str
