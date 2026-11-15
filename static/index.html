@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOAR-AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">🛡️</div>
+      <div class="logo-text">SOAR<span>-AI</span></div>
+    </div>
+    <a class="nav-item active" data-tab="scan"><span class="ico">⚡</span> Scan</a>
+    <a class="nav-item" data-tab="history"><span class="ico">🕐</span> History</a>
+    <a class="nav-item" data-tab="about"><span class="ico">ⓘ</span> About</a>
+    <div class="sidebar-foot">
+      <span class="dot">●</span> engine: online<br>
+      scanner: trivy<br>
+      triage: claude
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      Dependency Security Scanner
+    </div>
+    <div class="content">
+
+      <section id="scan" class="tab active">
+        <h1>Scan a package</h1>
+        <p class="subtitle">Enter a package and version. It is scanned with Trivy and each finding is triaged by an LLM: critical, review or likely noise.</p>
+        <form id="scanForm">
+          <select id="ecosystem">
+            <option value="pip">pip (Python)</option>
+            <option value="npm">npm (JavaScript)</option>
+          </select>
+          <input id="package" placeholder="package (e.g. requests)" required>
+          <input id="version" placeholder="version (e.g. 2.19.0)" required>
+          <button type="submit" id="scanBtn">▶ Scan</button>
+        </form>
+        <div id="results"></div>
+
+      </section>
+            <section id="history" class="tab">
+        <h1>Scan history</h1>
+        <p class="subtitle">Recent scans, newest first. Click one to see its findings.</p>
+        <div id="historyList"></div>
+      </section>
+
+      <section id="about" class="tab about">
+        <h1>About SOAR-AI</h1>
+        <p>SOAR-AI ingests security findings from a scanner (<code>Trivy</code>), normalises them into a common, source-agnostic format, and an LLM classifies each one as <strong>critical</strong>, <strong>review</strong> or <strong>likely noise</strong>, with a reason and a suggested action.</p>
+        <p>The goal is the same as a SOAR (Security Orchestration, Automation and Response): take the manual, repetitive work of triaging security findings and automate it, so a team only spends time on what needs human judgement.</p>
+        <p>Built with <code>Python</code>, <code>FastAPI</code>, <code>Trivy</code> and <code>Anthropic Claude</code>. Working prototype.</p>
+      </section>
+
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+  <div id="toast" class="toast"></div>
+</body>
+</html>
