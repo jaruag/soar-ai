@@ -21,7 +21,7 @@ The goal is the same as a SOAR (Security Orchestration, Automation and Response)
 
 - **Two ecosystems:** scans both Python (pip) and JavaScript (npm) packages.
 - **Live scanning:** runs Trivy on-demand against the exact package and version you enter.
-- **LLM triage:** each finding gets a verdict (critical / review / likely noise), a reason and a suggested fix, returned as structured JSON and parsed robustly.
+- **LLM triage:** each finding gets a verdict (critical / review / likely noise), a reason and a suggested fix, returned as structured JSON and parsed robustly. The classifier fails safe to "review" if a response can't be parsed.
 - **Web UI:** a sidebar app with a scan view and a history of past scans (stored in SQLite).
 - **Tested:** API tests (pytest) and end-to-end browser tests (Playwright).
 
@@ -96,11 +96,22 @@ Open **http://127.0.0.1:8000** and scan a package, e.g. `requests` `2.19.0` on p
 
 ---
 
+## Command line (optional)
+
+`main.py` classifies an existing Trivy report from the terminal. Generate one first (the repo includes a deliberately vulnerable `vulnscan/` folder):
+
+```bash
+trivy fs --format json -o data/trivy_report.json vulnscan/
+python main.py --limit 10    # or --all
+```
+
+---
+
 ## Running the tests
 
 ```bash
-# API tests only (fast)
-pytest tests/test_api.py -v
+# Fast tests only (no live scan, no paid API calls)
+pytest -m "not slow" -v
 
 # All tests, including end-to-end (needs the server running + Playwright browsers)
 playwright install chromium
