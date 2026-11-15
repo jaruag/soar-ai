@@ -9,13 +9,13 @@ from playwright.sync_api import Page, expect
 
 BASE_URL = "http://127.0.0.1:8000"
 
-
+@pytest.mark.e2e
 def test_page_loads(page: Page):
     """The main page loads and shows the app title."""
     page.goto(BASE_URL)
     expect(page.locator(".logo-text")).to_contain_text("SOAR")
 
-
+@pytest.mark.e2e
 def test_scan_form_is_visible(page: Page):
     """The scan form and its fields are present."""
     page.goto(BASE_URL)
@@ -23,7 +23,7 @@ def test_scan_form_is_visible(page: Page):
     expect(page.locator("#version")).to_be_visible()
     expect(page.locator("#scanBtn")).to_be_visible()
 
-
+@pytest.mark.e2e
 def test_tab_navigation(page: Page):
     """Clicking the About tab shows the about content."""
     page.goto(BASE_URL)
@@ -37,7 +37,7 @@ def test_tab_navigation(page: Page):
     # Now it should be visible
     expect(page.locator("#about")).to_be_visible()
 
-
+@pytest.mark.e2e
 @pytest.mark.slow
 def test_scan_shows_results(page: Page):
     """Running a real scan shows finding cards. This is slow (live scan + LLM)."""
@@ -50,13 +50,14 @@ def test_scan_shows_results(page: Page):
     # Wait for at least one finding card to appear (up to 60s for scan + LLM)
     expect(page.locator(".finding").first).to_be_visible(timeout=60000)
 
+@pytest.mark.e2e
 def test_history_tab_loads(page: Page):
     """Clicking History shows the history heading."""
     page.goto(BASE_URL)
     page.locator('.nav-item[data-tab="history"]').click()
     expect(page.locator("#history h1")).to_contain_text("history", ignore_case=True)
 
-
+@pytest.mark.e2e
 def test_wrong_ecosystem_shows_toast(page: Page):
     """Scanning a Python package while npm is selected should show a toast,
     not run a scan."""
@@ -72,7 +73,7 @@ def test_wrong_ecosystem_shows_toast(page: Page):
     expect(page.locator("#toast")).to_be_visible()
     expect(page.locator("#toast")).to_contain_text("Python")
 
-
+@pytest.mark.e2e
 def test_ecosystem_selector_has_options(page: Page):
     """The ecosystem selector offers both pip and npm."""
     page.goto(BASE_URL)
