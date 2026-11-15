@@ -5,6 +5,7 @@ depending on a live scan or LLM call where we can avoid it.
 """
 
 from fastapi.testclient import TestClient
+import pytest
 
 from api import app
 
@@ -34,7 +35,7 @@ def test_scan_requires_package_and_version():
     # FastAPI returns 422 when the request body fails validation.
     assert response.status_code == 422
 
-
+@pytest.mark.slow
 def test_scan_defaults_to_pip():
     """The ecosystem field should default to pip when not provided."""
     # We only check the request is accepted and reaches the scan logic;
@@ -46,6 +47,7 @@ def test_scan_defaults_to_pip():
     assert body["package"] == "nonexistent-xyz"
     assert "findings" in body
 
+@pytest.mark.slow
 def test_scan_npm_ecosystem():
     """A scan with ecosystem=npm should be accepted and reach the scan logic."""
     response = client.post("/scan", json={
@@ -56,7 +58,7 @@ def test_scan_npm_ecosystem():
     assert response.status_code == 200
     assert response.json()["package"] == "nonexistent-npm-xyz"
 
-
+@pytest.mark.slow
 def test_scan_respects_limit():
     """The limit field should cap how many findings come back."""
     response = client.post("/scan", json={
