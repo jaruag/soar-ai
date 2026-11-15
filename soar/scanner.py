@@ -57,7 +57,7 @@ def scan_package(package: str, version: str, ecosystem: str = "pip") -> dict:
             ],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,
         )
 
         if result.returncode != 0:
