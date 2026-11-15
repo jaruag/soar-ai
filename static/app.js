@@ -17,6 +17,23 @@ const scanBtn = document.getElementById("scanBtn");
 
 
 // ============================================================
+//  Utilities
+// ============================================================
+
+// Escape text before inserting it into the DOM, to prevent XSS.
+// Package names and LLM/Trivy output are untrusted input.
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text ?? "";
+    return div.innerHTML;
+}
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+
+// ============================================================
 //  Tab navigation
 // ============================================================
 function setupTabs() {
@@ -48,7 +65,7 @@ function renderProgress(percent, label) {
         <div class="progress">
             <div class="progress-bar" style="width:${percent}%"></div>
         </div>
-        <div class="progress-label">${label} <span class="pct">${percent}%</span></div>
+        <div class="progress-label">${escapeHtml(label)} <span class="pct">${percent}%</span></div>
     `;
 }
 
@@ -96,20 +113,21 @@ function renderSummary(counts) {
 }
 
 function renderFinding(finding) {
+    const verdict = escapeHtml(finding.verdict);
     return `
-        <div class="finding ${finding.verdict}">
-            <span class="verdict ${finding.verdict}">${finding.verdict.replace("_", " ")}</span>
-            <h3>${finding.title}</h3>
-            <p><span class="label">Asset:</span> ${finding.asset}</p>
-            <p><span class="label">Why:</span> ${finding.reason}</p>
-            <p><span class="label">Action:</span> ${finding.action}</p>
+        <div class="finding ${verdict}">
+            <span class="verdict ${verdict}">${verdict.replace("_", " ")}</span>
+            <h3>${escapeHtml(finding.title)}</h3>
+            <p><span class="label">Asset:</span> ${escapeHtml(finding.asset)}</p>
+            <p><span class="label">Why:</span> ${escapeHtml(finding.reason)}</p>
+            <p><span class="label">Action:</span> ${escapeHtml(finding.action)}</p>
         </div>
     `;
 }
 
 function renderResults(data) {
     if (!data.findings || data.findings.length === 0) {
-        results.innerHTML = `<div class="status">${data.message || "No findings."}</div>`;
+        results.innerHTML = `<div class="status">${escapeHtml(data.message || "No findings.")}</div>`;
         return;
     }
 
@@ -177,10 +195,6 @@ async function runScan(pkg, version, ecosystem) {
     }
 }
 
-function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 
 // ============================================================
 //  History
@@ -198,7 +212,6 @@ async function loadHistory() {
             return;
         }
 
-        // Render the list plus an empty slot for the selected scan's detail
         list.innerHTML = data.history.map(renderHistoryRow).join("")
                        + '<div id="historyDetail"></div>';
 
@@ -213,14 +226,14 @@ async function loadHistory() {
 function renderHistoryRow(item) {
     const date = new Date(item.scanned_at).toLocaleString();
     return `
-        <div class="finding history-row" data-id="${item.id}" style="cursor:pointer">
-            <h3>${item.package}@${item.version} <span class="label">(${item.ecosystem})</span></h3>
+        <div class="finding history-row" data-id="${escapeHtml(String(item.id))}" style="cursor:pointer">
+            <h3>${escapeHtml(item.package)}@${escapeHtml(item.version)} <span class="label">(${escapeHtml(item.ecosystem)})</span></h3>
             <div class="summary-bar">
                 <span class="pill c"><b>${item.counts.critical || 0}</b> critical</span>
                 <span class="pill r"><b>${item.counts.review || 0}</b> review</span>
                 <span class="pill n"><b>${item.counts.likely_noise || 0}</b> noise</span>
             </div>
-            <p class="label" style="font-size:12px">${date}</p>
+            <p class="label" style="font-size:12px">${escapeHtml(date)}</p>
         </div>
     `;
 }
@@ -231,7 +244,7 @@ async function showHistoryDetail(scanId) {
     detail.innerHTML = '<div class="status">Loading…</div>';
 
     try {
-        const res = await fetch(`/history/${scanId}`);
+        const res = await fetch(`/history/${encodeURIComponent(scanId)}`);
         const data = await res.json();
 
         if (!data.findings || data.findings.length === 0) {
@@ -239,7 +252,7 @@ async function showHistoryDetail(scanId) {
             return;
         }
 
-        const title = `<h2 style="margin-top:24px">${data.package}@${data.version} (${data.ecosystem})</h2>`;
+        const title = `<h2 style="margin-top:24px">${escapeHtml(data.package)}@${escapeHtml(data.version)} (${escapeHtml(data.ecosystem)})</h2>`;
         detail.innerHTML = title + data.findings.map(renderFinding).join("");
         detail.scrollIntoView({ behavior: "smooth" });
     } catch (err) {
@@ -255,7 +268,7 @@ let toastTimer = null;
 
 function showToast(message) {
     const toast = document.getElementById("toast");
-    toast.textContent = message;
+    toast.textContent = message;   // textContent is already safe (no HTML injection)
     toast.classList.add("show");
 
     clearTimeout(toastTimer);
