@@ -1,6 +1,5 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from soar.scanner import scan_package
 from soar.sources.trivy import parse_report
 from fastapi.responses import FileResponse
@@ -11,12 +10,7 @@ from soar.pipeline import process
 
 app = FastAPI(title="SOAR-AI API")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 storage.init_db()
 REPORT_PATH = "data/trivy_report.json"
@@ -26,7 +20,7 @@ class ScanRequest(BaseModel):
     package: str
     version: str
     ecosystem: str = "pip"   # "pip" or "npm"
-    limit: int = 5
+    limit: int = Field(5, ge=1, le=20) 
 
 
 @app.get("/")
