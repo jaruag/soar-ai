@@ -12,7 +12,7 @@ load_dotenv()
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-MODEL = "claude-haiku-4-5-20251001" 
+MODEL = "claude-haiku-4-5-20251001"
 
 SYSTEM_PROMPT = """You are a security triage assistant inside a SOAR pipeline.
 Given a security finding, decide how it should be triaged.
@@ -24,6 +24,7 @@ Reply ONLY with a valid JSON object, no extra text, with these keys:
 
 Be conservative: if something could be serious, lean towards "review"
 rather than "likely_noise"."""
+
 
 def _extract_json(text: str) -> dict:
     """Extract a JSON object from the model's reply, even if it's
@@ -44,7 +45,9 @@ def _extract_json(text: str) -> dict:
 
 
 def classify(finding: Finding) -> dict:
-    """Send a finding to the LLM and return its triage decision."""
+    """Send a finding to the LLM and return its triage decision.
+    Fails safe to 'review' if the model's response can't be parsed,
+    so one bad response never crashes the whole scan."""
     user_message = (
         f"Source: {finding.source}\n"
         f"Title: {finding.title}\n"
@@ -54,12 +57,30 @@ def classify(finding: Finding) -> dict:
         f"Description: {finding.description}"
     )
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=300,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
+    try:
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=300,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_message}],
+        )
+        text = response.content[0].text.strip()
+        decision = _extract_json(text)
 
-    text = response.content[0].text.strip()
-    return _extract_json(text)
+        # Make sure the verdict is one we expect; otherwise treat as review
+        if decision.get("verdict") not in ("critical", "review", "likely_noise"):
+            decision["verdict"] = "review"
+
+        return {
+            "verdict": decision["verdict"],
+            "reason": decision.get("reason", "No reason provided."),
+            "suggested_action": decision.get("suggested_action", "Review this finding manually."),
+        }
+
+    except Exception:
+        # Malformed JSON, API error, unexpected shape... fail safe to review
+        return {
+            "verdict": "review",
+            "reason": "The model's response could not be parsed; flagged for manual review.",
+            "suggested_action": "Review this finding manually.",
+        }
