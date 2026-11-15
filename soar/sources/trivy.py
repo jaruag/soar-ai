@@ -14,11 +14,8 @@ _SEVERITY_MAP = {
 }
 
 
-def load_findings(report_path: str) -> list[Finding]:
-    """Read a Trivy JSON report and return a list of normalised Findings."""
-    with open(report_path) as f:
-        report = json.load(f)
-
+def parse_report(report: dict) -> list[Finding]:
+    """Turn an already-loaded Trivy JSON report (a dict) into Findings."""
     findings = []
     for result in report.get("Results", []):
         target = result.get("Target", "")
@@ -31,10 +28,16 @@ def load_findings(report_path: str) -> list[Finding]:
                 source="trivy",
                 title=vuln.get("Title") or f"{vuln.get('VulnerabilityID')} in {pkg}",
                 severity=_SEVERITY_MAP.get(vuln.get("Severity", "UNKNOWN"), Severity.UNKNOWN),
-                description=(vuln.get("Description") or "")[:500],  # keep it short
+                description=(vuln.get("Description") or "")[:500],
                 asset=f"{pkg} {version} ({target})",
                 identifier=vuln.get("VulnerabilityID", ""),
                 raw={"fixed_version": fixed},
             ))
-
     return findings
+
+
+def load_findings(report_path: str) -> list[Finding]:
+    """Read a Trivy JSON report from a file and return normalised Findings."""
+    with open(report_path) as f:
+        report = json.load(f)
+    return parse_report(report)
