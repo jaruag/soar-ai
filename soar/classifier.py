@@ -5,6 +5,9 @@ import os
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import logging
+
+logger = logging.getLogger(__name__)
 
 from soar.models import Finding
 
@@ -46,8 +49,8 @@ def _extract_json(text: str) -> dict:
 
 def classify(finding: Finding) -> dict:
     """Send a finding to the LLM and return its triage decision.
-    Fails safe to 'review' if the model's response can't be parsed,
-    so one bad response never crashes the whole scan."""
+    Fails safe to 'review', but logs the real cause so an API/key
+    problem isn't silently hidden as a parsing issue."""
     user_message = (
         f"Source: {finding.source}\n"
         f"Title: {finding.title}\n"
@@ -57,6 +60,8 @@ def classify(finding: Finding) -> dict:
         f"Description: {finding.description}"
     )
 
+    # 1. Call the API. A failure here (bad/missing key, network, rate limit)
+    #    is a real problem we want to surface, not hide as a parsing issue.
     try:
         response = client.messages.create(
             model=MODEL,
@@ -65,6 +70,16 @@ def classify(finding: Finding) -> dict:
             messages=[{"role": "user", "content": user_message}],
         )
         text = response.content[0].text.strip()
+    except Exception as e:
+        logger.error("LLM API call failed (check API key / network): %s", e)
+        return {
+            "verdict": "review",
+            "reason": "The security model could not be reached; flagged for manual review.",
+            "suggested_action": "Check the service configuration, then re-run.",
+        }
+
+    # 2. Parse the response. A failure here is a malformed-JSON issue.
+    try:
         decision = _extract_json(text)
 
         # Make sure the verdict is one we expect; otherwise treat as review
@@ -76,9 +91,8 @@ def classify(finding: Finding) -> dict:
             "reason": decision.get("reason", "No reason provided."),
             "suggested_action": decision.get("suggested_action", "Review this finding manually."),
         }
-
-    except Exception:
-        # Malformed JSON, API error, unexpected shape... fail safe to review
+    except Exception as e:
+        logger.warning("Could not parse model response: %s", e)
         return {
             "verdict": "review",
             "reason": "The model's response could not be parsed; flagged for manual review.",
